@@ -66,6 +66,28 @@ When the hospital API becomes available, only two things change:
 2. `HttpHospitalApiAdapter.forward()` gets its body filled in per the real contract
 No changes to business logic.
 
+## Delivered updates (session 5, 2026-02-01)
+- **Classifier rewritten as `HybridIntentClassifier` class** (`app/services/intent_classifier.py`).
+  - Explicit `FaissPort`, `RuleEnginePort`, `LlmFallbackPort` protocols → trivially unit-testable with fakes; production still uses the real singletons via default DI.
+  - Pipeline stages are private methods (`_semantic_search`, `_score_candidates`, `_try_llm_fallback`, `_validate_in_catalog`, `_matched`, `_unknown`).
+  - **Anti-hallucination gates** at every boundary:
+    1. FAISS hit → re-fetched via `ServiceRepo.get_by_id` (deleted services silently dropped)
+    2. LLM answer → must be in the top-K allow-list AND resolvable via `ServiceRepo.get_by_code`
+    3. LLM confidence must ≥ semantic hybrid confidence to override
+  - Semantic-primary scoring: `min(semantic + boost, 0.99)` with boost ≤ 0.10
+  - Groq LLM triggered ONLY when confidence < `CONFIDENCE_THRESHOLD` (0.85)
+  - Hard floor `MIN_SEMANTIC_THRESHOLD` (0.35) → returns `UNKNOWN_SERVICE` before the LLM is even consulted
+- **6 new behaviour tests** (`tests/test_intent_classifier.py`) with mocked ports asserting:
+  * High-confidence semantic path never calls LLM
+  * Below-min-threshold path never calls LLM
+  * LLM-invented codes outside top-K are rejected → UNKNOWN
+  * LLM null/refusal → UNKNOWN
+  * LLM promotion of borderline semantic candidates works
+  * Deleted-service FAISS hits are ignored gracefully
+- Backward-compat module-level `classify()` facade unchanged so all existing callers (`voice_agent`, REST endpoints) work without edits.
+
+**Test suite: 12/12 pass** · ruff clean
+
 ## Delivered updates (session 4, 2026-02-01)
 - **Deepgram model** bumped to `nova-3` (was `nova-2-general`)
 - **No blocking translation** — BGE-M3 handles multilingual directly. FAISS runs on the ORIGINAL transcript. Translation is now controlled by `TRANSLATE_FOR_AUDIT=false` (default off) and only used to enrich audit fields, never blocks the pipeline.
