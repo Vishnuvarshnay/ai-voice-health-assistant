@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     # Deepgram
     DEEPGRAM_API_KEY: str
-    DEEPGRAM_MODEL: str = "nova-2-general"
+    DEEPGRAM_MODEL: str = "nova-3"
     DEEPGRAM_LANGUAGE: str = "multi"
 
     # Cartesia
@@ -49,7 +49,11 @@ class Settings(BaseSettings):
     # Intent classifier
     EMBEDDING_MODEL: str = "BAAI/bge-m3"
     CONFIDENCE_THRESHOLD: float = 0.85
+    MIN_SEMANTIC_THRESHOLD: float = 0.35   # below this → UNKNOWN_SERVICE, no LLM call
     FAISS_TOP_K: int = 5
+    # Translation is OPTIONAL and only used for audit / reporting. BGE-M3
+    # is multilingual, so semantic matching runs on the ORIGINAL transcript.
+    TRANSLATE_FOR_AUDIT: bool = False
 
     # CORS
     CORS_ORIGINS: List[str] = Field(default_factory=lambda: ["http://localhost:4200"])

@@ -83,3 +83,22 @@ class ServiceRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     session: Mapped[VoiceSession | None] = relationship(back_populates="requests")
+
+
+class UnknownRequest(Base):
+    """Utterances that could not be mapped to any catalog service.
+
+    Stored so hospital administrators can review and extend the catalog.
+    """
+    __tablename__ = "unknown_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[int | None] = mapped_column(
+        ForeignKey("voice_sessions.id"), nullable=True
+    )
+    raw_transcript: Mapped[str] = mapped_column(Text)
+    detected_language: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    top_semantic_score: Mapped[float] = mapped_column(Float, default=0.0)
+    top_candidate_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    review_status: Mapped[str] = mapped_column(String(32), default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

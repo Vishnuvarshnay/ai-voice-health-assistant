@@ -11,11 +11,13 @@ export interface VoiceToken {
 }
 
 export interface IntentResult {
+  status: 'MATCHED' | 'UNKNOWN_SERVICE';
   service_code: string | null;
   service_name: string | null;
   confidence: number;
   used_fallback: boolean;
   detected_language: string | null;
+  raw_transcript: string;
   normalized_transcript_en: string;
   slots: Record<string, unknown>;
   top_candidates: Array<{

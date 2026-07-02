@@ -1,222 +1,387 @@
 # Hospital AI Voice Assistant
 
-Production-ready voice microservice for hospital service requests.
-Patient speaks → LiveKit transport → Deepgram Streaming STT → Hybrid Intent
-Classifier (BGE-M3 + FAISS + Rule Engine) → validated JSON service request →
-Cartesia Streaming TTS confirmation.
+A production-ready, multilingual AI Voice Assistant built for hospital
+patients.
 
-- **Greeting SLA**: < 500 ms after room join
-- **Multilingual input** (auto language detection), **English** normalized JSON output
-- **LLM fallback** (Groq `llama-3.3-70b-versatile`) when hybrid confidence < 0.85
-- **Stack**: Angular 17 · FastAPI (async) · PostgreSQL 17 · Redis 7 · LiveKit · Docker Compose
+The assistant listens to a patient's voice, understands the request in any
+supported language, matches it against a predefined hospital service
+catalog using semantic search, generates validated JSON, stores the
+request, optionally forwards it to the Hospital Management System, and
+replies using natural voice.
+
+This project is designed as an **independent microservice** and can later
+be integrated with any Hospital Management System without changing the
+core AI logic.
 
 ---
 
-## 1. Prerequisites
-- Docker Desktop / Docker Engine 24+ with Docker Compose v2
-- 8 GB RAM minimum (BGE-M3 embedding model is ~2.3 GB)
-- API keys:
-  - [Deepgram](https://console.deepgram.com/) — Streaming STT
-  - [Cartesia](https://play.cartesia.ai/) — Streaming TTS
-  - [Groq](https://console.groq.com/) — LLM fallback
-  - LiveKit self-hosted (already bundled in docker-compose)
+# Features
 
-## 2. Quick start
+- Streaming Voice Conversation
+- LiveKit Voice Transport
+- Deepgram Streaming Speech-to-Text (Nova-3)
+- Automatic Language Detection
+- Multilingual Intent Classification
+- Semantic Search using BGE-M3 + FAISS
+- Rule-Based Slot Extraction
+- Groq LLM Fallback (only when confidence < 0.85)
+- Cartesia Streaming Text-to-Speech (Sonic)
+- PostgreSQL Persistence
+- Redis Session Cache
+- Docker Compose Deployment
+- Hospital API Adapter Pattern
+- Production Logging
+- Health Checks
+- Fully Async FastAPI Backend
+- Angular 17 Frontend
+
+---
+
+# Technology Stack
+
+| Component            | Technology                        |
+|----------------------|-----------------------------------|
+| Frontend             | Angular 17                        |
+| Backend              | FastAPI (Async)                   |
+| Voice Transport      | LiveKit                           |
+| Speech-to-Text       | Deepgram Streaming Nova-3         |
+| Language Detection   | Deepgram                          |
+| Semantic Model       | BGE-M3                            |
+| Vector Search        | FAISS                             |
+| Rule Engine          | Python                            |
+| LLM Fallback         | Groq `llama-3.3-70b-versatile`    |
+| Text-to-Speech       | Cartesia Sonic                    |
+| Database             | PostgreSQL 17                     |
+| Cache                | Redis 7                           |
+| Deployment           | Docker Compose                    |
+
+---
+
+# Architecture
+
+```
+Patient
+   │
+   ▼
+LiveKit
+   │
+   ▼
+Deepgram Streaming STT
+   │
+   ▼
+Original Transcript
+   │
+   ▼
+Language Detection
+   │
+   ▼
+BGE-M3 Multilingual Embedding
+   │
+   ▼
+FAISS Semantic Search
+   │
+   ▼
+Top-K Candidate Services
+   │
+   ▼
+Business Rule Engine
+   • Room Number
+   • Quantity
+   • Time
+   • Priority
+   • Slot Extraction
+   • Keyword Boost (optional)
+   │
+   ▼
+Confidence Calculation
+   │
+   ▼
+Confidence ≥ 0.85 ?
+   ├── YES ──► Validated JSON
+   └── NO  ──► Groq LLM Fallback
+                    │
+                    ▼
+              JSON Validation
+                    │
+                    ▼
+             Persist Request  (PostgreSQL)
+                    │
+                    ▼
+             HospitalApiAdapter  (default: no-op)
+                    │
+                    ▼
+             Cartesia Streaming TTS
+                    │
+                    ▼
+                 Patient
+```
+
+---
+
+# Design Principles
+
+## Semantic Search First
+The primary signal is semantic similarity using BGE-M3 embeddings.
+The classifier does **not** rely on keywords. Keywords only provide a
+small confidence boost (≤ +0.10).
+
+## No Translation Required
+BGE-M3 is multilingual. Patient requests remain in their original
+language. Hindi, Spanish, French, German, Arabic, Japanese, Tamil,
+Gujarati, Punjabi… all map directly to the same English hospital
+service. Translation is optional and used only for audit logs, reporting,
+and hospital ticket text — not for semantic matching. Toggle with
+`TRANSLATE_FOR_AUDIT=true` in `.env`.
+
+---
+
+# Intent Classification Pipeline
+
+```
+Speech → Deepgram STT → Language Detection → BGE-M3 Embedding →
+FAISS → Top-K Services → Business Rule Validation →
+Confidence Score → JSON
+```
+
+---
+
+# Rule Engine
+
+The Rule Engine extracts structured information:
+
+- Room Number
+- Bed Number
+- Quantity
+- Time
+- Priority
+- Urgency
+
+It also protects against semantically-similar but invalid matches. For
+example, if a patient says *"I need coconut water"*, semantic search may
+suggest `DRINKING_WATER`, but the top semantic score falls below
+`MIN_SEMANTIC_THRESHOLD` (0.35 by default) or the LLM refuses to pick a
+match — so the assistant returns `UNKNOWN_SERVICE`.
+
+---
+
+# LLM Fallback
+
+The LLM is **not** used for every request. It is used **only** when
+confidence < 0.85.
+
+Model: **Groq `llama-3.3-70b-versatile`**
+
+The LLM receives the hospital service catalog and MUST choose only from
+existing services. It cannot invent categories or services.
+
+---
+
+# Unknown Services
+
+If no service matches, the assistant returns:
+
+```json
+{ "status": "UNKNOWN_SERVICE" }
+```
+
+The original transcript is stored in the `unknown_requests` table for
+later review. Hospital administrators can:
+
+- List pending unknowns:
+  `GET /api/v1/unknown-requests?status=pending`
+- Mark an unknown as reviewed / added to catalog:
+  `PATCH /api/v1/unknown-requests/{id}` with
+  `{ "review_status": "added_to_catalog" }`
+
+They can then add new services to the catalog and rebuild the index.
+
+---
+
+# Hospital Service Catalog
+
+Stored in PostgreSQL. Each service contains:
+
+- Category
+- Service code
+- Description
+- Example utterances
+- Priority
+- Required slots
+
+The FAISS index is built from this catalog on startup and whenever
+`POST /api/v1/services/rebuild-index` is called.
+
+---
+
+# Hospital API Integration
+
+The assistant works completely independently. No hospital-specific API is
+hardcoded. Integration uses the **Adapter Pattern**.
+
+```
+HospitalApiAdapter          (abstract port)
+   ├── NullHospitalApiAdapter   (default — no-op)
+   └── HttpHospitalApiAdapter   (stub, wired but empty)
+```
+
+When the hospital provides its API, only
+`HttpHospitalApiAdapter.forward()` needs implementation. No other code
+changes are required.
+
+---
+
+# Project Structure
+
+```
+hospital-voice-assistant/
+├── backend/
+│   ├── app/
+│   │   ├── api/                (v1 endpoints)
+│   │   ├── core/               (logging, startup)
+│   │   ├── db/                 (async SQLAlchemy)
+│   │   ├── models/             (ORM)
+│   │   ├── repositories/       (data access)
+│   │   ├── schemas/            (Pydantic DTOs)
+│   │   ├── services/           (classifier, embeddings, FAISS, rule, LLM,
+│   │   │                        LiveKit, hospital_api/)
+│   │   ├── worker/             (LiveKit voice agent)
+│   │   └── seed/               (catalog seed + loader)
+│   ├── alembic/                (migrations)
+│   ├── tests/
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/
+│   ├── src/app/
+│   ├── Dockerfile
+│   └── package.json
+├── infrastructure/livekit/livekit.yaml
+├── docker-compose.yml
+├── .env.example
+└── README.md
+```
+
+---
+
+# Database
+
+## `service_requests`
+Stores every confirmed request: raw transcript, language, category,
+service, confidence, timestamps.
+
+## `unknown_requests`
+Stores utterances that could not be mapped: transcript, language,
+confidence, `top_candidate_code`, `review_status`.
+
+## `service_catalog` (`hospital_services` + `service_categories`)
+Category, service code, description, example utterances, keywords,
+priority, required slots.
+
+## `voice_sessions`
+LiveKit room name + patient identity + language + timestamps.
+
+---
+
+# Docker Services
+
+Docker Compose starts:
+
+- Angular (`frontend`)
+- FastAPI (`backend`)
+- PostgreSQL 17 (`postgres`)
+- Redis 7 (`redis`)
+- LiveKit (`livekit`)
+- LiveKit voice-agent worker (`voice-agent`)
+
+One command:
 
 ```bash
-git clone <this-repo>
-cd hospital-voice-assistant
-cp .env.example .env
-# → edit .env and paste your Deepgram / Cartesia / Groq API keys
-
 docker compose up --build
 ```
 
-On first boot the backend downloads the **BGE-M3** embedding model (~2 GB).
-Subsequent boots reuse the cached model volume.
+---
 
-Once up:
-- Frontend UI: http://localhost:4200
-- Backend API docs: http://localhost:8000/docs
-- LiveKit server: ws://localhost:7880
-- Postgres: `localhost:5432` (user/pass from `.env`)
-- Redis: `localhost:6379`
+# Performance Targets
 
-## 3. First run – seed the service catalog
+| Stage                | Target       |
+|----------------------|--------------|
+| Greeting             | < 500 ms     |
+| Speech Recognition   | < 400 ms     |
+| Intent Classification| < 150 ms     |
+| Cartesia TTS         | < 400 ms     |
+| End-to-End           | < 2 seconds  |
 
-The catalog ships with **44 real hospital services across 9 categories**
-(Cleaning, AC, TV, Laundry, Electrical, Maintenance, Patient Support,
-Patient Diet, Service Complaint) in `backend/app/seed/default_services.json`.
+---
 
-Load it into Postgres and build the FAISS index:
+# Security
+
+- JWT authentication (LiveKit access tokens)
+- Input validation (Pydantic v2)
+- Output validation (Pydantic v2 + LLM `response_format=json_object`)
+- SQL injection protection (SQLAlchemy async ORM)
+- Prompt injection protection (LLM constrained to catalog codes only)
+- Environment variables only for secrets
+- Structured JSON logging with latency spans
+
+---
+
+# Health Endpoints
+
+`GET /api/v1/healthz` – process liveness.
+
+`GET /api/v1/readyz` – checks PostgreSQL, Redis, embedding model,
+FAISS index. Returns `503` when any dependency is not ready.
+
+---
+
+# Development
+
+Clone:
+
+```bash
+git clone <repository>
+cd hospital-voice-assistant
+```
+
+Configure:
+
+```bash
+cp .env.example .env
+# → edit .env and paste your Deepgram / Cartesia / Groq API keys
+```
+
+Run:
+
+```bash
+docker compose up --build
+```
+
+Seed services:
 
 ```bash
 docker compose exec backend python -m app.seed.seed_services
 ```
 
-To customize, edit `backend/app/seed/default_services.json` (each row has
-`code`, `name`, `description`, `example_utterances`, `keywords`,
-`required_slots`, `priority`) and re-run the seeder — or POST to
-`/api/v1/services` and then `POST /api/v1/services/rebuild-index`.
-
-### Forward to your own hospital API (adapter pattern, plug-in later)
-
-The core voice assistant works **standalone**. Every validated JSON is
-persisted to Postgres and returned to the frontend regardless of any
-external system.
-
-When the hospital's own API is ready, plug it in via the adapter interface —
-**no change to the business logic is required**.
-
-The contract lives in
-`backend/app/services/hospital_api/base.py`:
-
-```python
-class HospitalApiAdapter(ABC):
-    async def forward(self, payload: dict) -> None: ...
-```
-
-Two adapters ship out of the box:
-
-| Adapter | When it's used | What it does |
-|---|---|---|
-| `NullHospitalApiAdapter` | `HOSPITAL_API_URL` is empty (default) | Logs and returns |
-| `HttpHospitalApiAdapter` | `HOSPITAL_API_URL` is set | **Stub** — call site is wired, but `forward()` is intentionally empty because the hospital API contract is not yet defined. Fill it in when the contract is available. |
-
-To activate later:
-1. Set `HOSPITAL_API_URL` (+ optional `HOSPITAL_API_KEY`) in `.env`.
-2. Implement `HttpHospitalApiAdapter.forward()` in
-   `backend/app/services/hospital_api/http_adapter.py` per your API's
-   contract (or add a new adapter class and register it in
-   `hospital_api/__init__.py::get_adapter`).
-3. Restart the `backend` and `voice-agent` containers. Done.
-
-The core app (`intent_classifier`, `voice_agent`, REST endpoints) does not
-change. No hospital-specific URLs, paths, methods, or payload assumptions
-exist anywhere in the core code.
-
-## 4. Try it
-
-1. Open http://localhost:4200
-2. Click **Join Room** — LiveKit will connect and you should hear the
-   English greeting within 500 ms.
-3. Speak a request in any language (e.g. Spanish, Hindi, Mandarin).
-4. The right panel shows the normalized English service-request JSON.
-
-## 5. Project layout
+Rebuild the semantic index:
 
 ```
-hospital-voice-assistant/
-├── docker-compose.yml
-├── .env.example
-├── README.md
-├── backend/                        # FastAPI + async SQLAlchemy + LiveKit worker
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── alembic/                    # DB migrations
-│   └── app/
-│       ├── main.py                 # FastAPI entrypoint + startup lifecycle
-│       ├── config.py               # Settings (env-driven)
-│       ├── api/v1/                 # REST endpoints
-│       ├── core/                   # logging, startup, dependencies
-│       ├── db/                     # async SQLAlchemy session + base
-│       ├── models/                 # ORM tables
-│       ├── schemas/                # Pydantic DTOs
-│       ├── repositories/           # data-access layer
-│       ├── services/               # intent classifier, STT, TTS, LLM
-│       ├── worker/                 # LiveKit voice agent process
-│       └── seed/                   # service-catalog seed data + loader
-├── frontend/                       # Angular 17 SPA + LiveKit client SDK
-│   ├── Dockerfile
-│   ├── package.json
-│   └── src/app/
-└── infrastructure/
-    └── livekit/livekit.yaml        # Self-hosted LiveKit config
+POST /api/v1/services/rebuild-index
 ```
 
-## 6. Intent classification pipeline (semantic-primary)
+---
 
-Semantic similarity is the **base confidence signal**. Keywords are a small
-tie-breaker / boost only — they cannot single-handedly pick a service, and
-they cannot beat a semantically stronger candidate.
+# AI Principles
 
-```
-speech ─► Deepgram STT (multi) ─► transcript
-                                     │
-                                     ▼
-                       (if non-English) Groq translate → English
-                                     │
-                                     ▼
-                              BGE-M3 embedding
-                                     │
-                                     ▼
-                          FAISS top-K nearest services      ← primary signal
-                                     │
-                                     ▼
-                   Rule engine  → extract slots (room, time, qty)
-                                → optional +0.10 keyword boost
-                                     │
-                                     ▼
-                     confidence = min(semantic + boost, 0.99)
-                                     │
-                        ┌────────────┴────────────┐
-                     ≥ 0.85                     < 0.85
-                        │                         │
-                        ▼                         ▼
-              Return JSON directly       Groq LLM fallback
-                                        (structured output;
-                                         chooses ONLY from catalog)
-                                                  │
-                                                  ▼
-                                       Return validated JSON
-                                                  │
-                                                  ▼
-                              Persist to Postgres · reply via Cartesia TTS ·
-                              hand off to `HospitalApiAdapter` (no-op by default)
-```
+- Never hallucinate services.
+- Never invent categories.
+- Always validate JSON.
+- Always preserve the original transcript.
+- Always use semantic search before LLM.
+- LLM is fallback only.
+- Hospital API is optional.
+- Business logic remains independent of hospital integrations.
 
-The service catalog lives in Postgres. Bootstrap from
-`backend/app/seed/default_services.json` or manage via
-`POST /api/v1/services` — either way the classifier reads from the DB and
-the FAISS index is rebuilt on demand via `POST /api/v1/services/rebuild-index`.
+---
 
-## 7. API surface (selected)
+# License
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET  | `/api/v1/health`                | Liveness / readiness |
-| GET  | `/api/v1/services`              | List service catalog |
-| POST | `/api/v1/services`              | Create a service |
-| POST | `/api/v1/services/rebuild-index`| Rebuild FAISS index |
-| POST | `/api/v1/intent/classify`       | Classify a text utterance |
-| POST | `/api/v1/voice/token`           | Mint LiveKit access token |
-| POST | `/api/v1/requests`              | Persist a confirmed service request |
-
-## 8. Development commands
-
-```bash
-# tail backend logs
-docker compose logs -f backend
-
-# apply a new migration
-docker compose exec backend alembic upgrade head
-
-# run backend tests
-docker compose exec backend pytest -q
-
-# rebuild the FAISS index after editing the catalog
-curl -X POST http://localhost:8000/api/v1/services/rebuild-index
-```
-
-## 9. Stopping
-
-```bash
-docker compose down          # keep data
-docker compose down -v       # wipe volumes (postgres, redis, model cache)
-```
-
-## 10. Notes on portability
-
-Everything runs from Docker Compose. No external dependency other than the
-API keys in `.env`. You can copy this directory to any machine with Docker
-installed and it will work identically.
+MIT

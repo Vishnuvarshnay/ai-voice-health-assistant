@@ -69,8 +69,21 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
 
+    op.create_table(
+        "unknown_requests",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("session_id", sa.Integer(), sa.ForeignKey("voice_sessions.id"), nullable=True),
+        sa.Column("raw_transcript", sa.Text(), nullable=False),
+        sa.Column("detected_language", sa.String(16), nullable=True),
+        sa.Column("top_semantic_score", sa.Float(), nullable=False, server_default="0"),
+        sa.Column("top_candidate_code", sa.String(64), nullable=True),
+        sa.Column("review_status", sa.String(32), nullable=False, server_default="pending"),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+    )
+
 
 def downgrade() -> None:
+    op.drop_table("unknown_requests")
     op.drop_table("service_requests")
     op.drop_index("ix_voice_sessions_room_name", table_name="voice_sessions")
     op.drop_table("voice_sessions")

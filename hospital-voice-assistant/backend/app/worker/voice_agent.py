@@ -28,7 +28,7 @@ from livekit.plugins import cartesia, deepgram, silero
 from app.config import settings
 from app.core.logging import configure_logging, latency, logger
 from app.db.session import AsyncSessionLocal
-from app.models.orm import ServiceRequest
+from app.models.orm import ServiceRequest, UnknownRequest
 from app.repositories.request_repo import RequestRepo
 from app.repositories.service_repo import ServiceRepo
 from app.services.embedding_service import embedding_service
@@ -62,21 +62,38 @@ async def _handle_transcript(transcript: str, room_name: str, identity: str) -> 
         with latency("worker.classify", transcript_len=len(transcript)):
             result = await classify(session, transcript=transcript)
 
+        req_repo = RequestRepo(session)
+        vs = await req_repo.get_session_by_room(room_name) or await req_repo.create_session(
+            room_name=room_name, identity=identity, detected_language=result.detected_language
+        )
+
         if not result.service_code:
+            # Persist the unknown utterance for later review by hospital admins.
+            top = result.top_candidates[0] if result.top_candidates else None
+            await req_repo.create_unknown(
+                UnknownRequest(
+                    session_id=vs.id,
+                    raw_transcript=transcript,
+                    detected_language=result.detected_language,
+                    top_semantic_score=float(top["semantic_score"]) if top else 0.0,
+                    top_candidate_code=top["service_code"] if top else None,
+                )
+            )
+            await session.commit()
+            logger.info(
+                "worker.unknown_persisted",
+                room=room_name,
+                top_candidate=top["service_code"] if top else None,
+            )
             return (
-                "I couldn't identify a matching hospital service. "
-                "Could you rephrase your request?"
+                "I'm sorry, that request isn't in our service list. "
+                "I've noted it down for the hospital staff to review."
             )
 
         svc_repo = ServiceRepo(session)
         svc = await svc_repo.get_by_code(result.service_code)
         if svc is None:
             return "Sorry, that service isn't available right now."
-
-        req_repo = RequestRepo(session)
-        vs = await req_repo.get_session_by_room(room_name) or await req_repo.create_session(
-            room_name=room_name, identity=identity, detected_language=result.detected_language
-        )
 
         payload: dict[str, Any] = {
             "service_code": svc.code,

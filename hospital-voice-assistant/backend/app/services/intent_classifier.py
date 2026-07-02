@@ -1,7 +1,19 @@
-"""Hybrid intent classifier: semantic (FAISS) + rule engine + optional LLM fallback."""
+"""Hybrid intent classifier — semantic-primary, multilingual, non-hallucinating.
+
+Design principles (per spec):
+  * BGE-M3 is multilingual, so semantic matching runs on the ORIGINAL
+    transcript. Translation is NOT required.
+  * Semantic (FAISS) is the base confidence signal.
+  * Rule engine extracts slots and provides at most a +0.10 keyword boost.
+  * Groq LLM is used ONLY when confidence < CONFIDENCE_THRESHOLD and
+    MUST pick from the DB catalog (or return null).
+  * If neither semantic nor LLM can match → status = UNKNOWN_SERVICE.
+  * Translation to English happens only when TRANSLATE_FOR_AUDIT=true and
+    is purely for audit/reporting fields.
+"""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from langdetect import DetectorFactory, detect
@@ -21,17 +33,23 @@ KEYWORD_BOOST_MAX = 0.10     # keywords contribute at most a +0.10 nudge
 KEYWORD_BOOST_CAP = 0.99     # boosted semantic score never claims certainty
 
 
+STATUS_MATCHED = "MATCHED"
+STATUS_UNKNOWN = "UNKNOWN_SERVICE"
+
+
 @dataclass
 class ClassifyResult:
+    status: str
     service_code: str | None
     service_name: str | None
     service_id: int | None
     confidence: float
     used_fallback: bool
     detected_language: str | None
+    raw_transcript: str
     normalized_transcript_en: str
-    slots: dict[str, Any]
-    top_candidates: list[dict[str, Any]]
+    slots: dict[str, Any] = field(default_factory=dict)
+    top_candidates: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _safe_detect_language(text: str) -> str | None:
@@ -39,6 +57,10 @@ def _safe_detect_language(text: str) -> str | None:
         return detect(text)
     except Exception:  # pragma: no cover - langdetect can throw on very short strings
         return None
+
+
+def _is_english(lang: str | None) -> bool:
+    return bool(lang) and lang.lower().startswith("en")
 
 
 async def classify(
@@ -49,35 +71,35 @@ async def classify(
     with latency("intent.classify", transcript_len=len(transcript)):
         lang = detected_language or _safe_detect_language(transcript)
 
-        # Normalize to English so downstream JSON payload is always English.
-        if lang and not lang.lower().startswith("en"):
-            with latency("intent.translate", src_lang=lang):
-                transcript_en = await llm_fallback.translate_to_english(transcript, lang)
-        else:
-            transcript_en = transcript
+        # BGE-M3 is multilingual → run FAISS search on the ORIGINAL transcript.
+        # Optional English rendering only for audit / reporting.
+        transcript_en = transcript
+        if settings.TRANSLATE_FOR_AUDIT and not _is_english(lang):
+            with latency("intent.translate_for_audit", src_lang=lang):
+                try:
+                    transcript_en = await llm_fallback.translate_to_english(transcript, lang)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("intent.translate.failed", error=str(exc))
 
-        # Semantic top-K over FAISS.
         with latency("intent.faiss_search"):
-            candidates = await faiss_index.search(transcript_en, top_k=settings.FAISS_TOP_K)
+            candidates = await faiss_index.search(transcript, top_k=settings.FAISS_TOP_K)
 
         if not candidates:
             logger.info("intent.no_candidates")
             return ClassifyResult(
+                status=STATUS_UNKNOWN,
                 service_code=None,
                 service_name=None,
                 service_id=None,
                 confidence=0.0,
                 used_fallback=False,
                 detected_language=lang,
+                raw_transcript=transcript,
                 normalized_transcript_en=transcript_en,
-                slots={},
-                top_candidates=[],
             )
 
         # Enrich each candidate with rule-engine slot extraction + optional
-        # small keyword boost. Semantic score remains the dominant signal —
-        # keywords cannot single-handedly select a match and cannot outweigh
-        # a semantically stronger candidate by more than KEYWORD_BOOST_MAX.
+        # keyword boost. Semantic score dominates.
         repo = ServiceRepo(session)
         best: dict[str, Any] | None = None
         enriched: list[dict[str, Any]] = []
@@ -86,7 +108,7 @@ async def classify(
             svc = await repo.get_by_id(cand["service_id"])
             if svc is None:
                 continue
-            rule = rule_engine.evaluate(transcript_en, svc.keywords, svc.required_slots)
+            rule = rule_engine.evaluate(transcript, svc.keywords, svc.required_slots)
             semantic = cand["semantic_score"]
             boost = min(rule.keyword_score * KEYWORD_BOOST_MAX, KEYWORD_BOOST_MAX)
             hybrid = min(SEMANTIC_WEIGHT * semantic + boost, KEYWORD_BOOST_CAP)
@@ -102,6 +124,7 @@ async def classify(
                 best = row
 
         assert best is not None
+        top_semantic = float(best["semantic_score"])
         confidence = float(best["hybrid_confidence"])
         used_fallback = False
         slots = dict(best["slots"])
@@ -109,7 +132,20 @@ async def classify(
         service_id = best["service_id"]
         service_name = best["service_name"]
 
-        # LLM fallback when hybrid confidence is below the threshold.
+        # Hard floor: if the best candidate is semantically far, skip LLM
+        # entirely and mark as UNKNOWN. This is what prevents e.g. "coconut
+        # water" from being force-matched to DRINKING_WATER.
+        if top_semantic < settings.MIN_SEMANTIC_THRESHOLD:
+            logger.info(
+                "intent.below_min_semantic",
+                top_score=top_semantic,
+                threshold=settings.MIN_SEMANTIC_THRESHOLD,
+            )
+            return _unknown(
+                lang, transcript, transcript_en, enriched, top_semantic, service_code
+            )
+
+        # LLM fallback ONLY when hybrid confidence is below the accept threshold.
         if confidence < settings.CONFIDENCE_THRESHOLD:
             with latency("intent.llm_fallback"):
                 catalog = [
@@ -133,30 +169,58 @@ async def classify(
                     slots = {**slots, **(llm_out.get("slots") or {})}
                     confidence = min(max(llm_conf, confidence), 0.999)
                     used_fallback = True
-            elif llm_code is None and llm_conf > 0:
-                # LLM says no service applies - lower our confidence accordingly.
-                service_code = None
-                service_id = None
-                service_name = None
-                used_fallback = True
+            else:
+                # LLM refused — no service applies.
+                return _unknown(
+                    lang, transcript, transcript_en, enriched, top_semantic, service_code
+                )
 
         return ClassifyResult(
+            status=STATUS_MATCHED,
             service_code=service_code,
             service_name=service_name,
             service_id=service_id,
             confidence=round(confidence, 4),
             used_fallback=used_fallback,
             detected_language=lang,
+            raw_transcript=transcript,
             normalized_transcript_en=transcript_en,
             slots=slots,
-            top_candidates=[
-                {
-                    "service_code": r["service_code"],
-                    "service_name": r["service_name"],
-                    "semantic_score": round(r["semantic_score"], 4),
-                    "keyword_score": round(r["keyword_score"], 4),
-                    "hybrid_confidence": round(r["hybrid_confidence"], 4),
-                }
-                for r in enriched
-            ],
+            top_candidates=_serialize_candidates(enriched),
         )
+
+
+def _serialize_candidates(enriched: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "service_code": r["service_code"],
+            "service_name": r["service_name"],
+            "semantic_score": round(r["semantic_score"], 4),
+            "keyword_score": round(r["keyword_score"], 4),
+            "hybrid_confidence": round(r["hybrid_confidence"], 4),
+        }
+        for r in enriched
+    ]
+
+
+def _unknown(
+    lang: str | None,
+    transcript: str,
+    transcript_en: str,
+    enriched: list[dict[str, Any]],
+    top_semantic: float,
+    top_code: str | None,
+) -> ClassifyResult:
+    return ClassifyResult(
+        status=STATUS_UNKNOWN,
+        service_code=None,
+        service_name=None,
+        service_id=None,
+        confidence=round(top_semantic, 4),
+        used_fallback=False,
+        detected_language=lang,
+        raw_transcript=transcript,
+        normalized_transcript_en=transcript_en,
+        slots={},
+        top_candidates=_serialize_candidates(enriched),
+    )

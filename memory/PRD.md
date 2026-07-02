@@ -66,6 +66,21 @@ When the hospital API becomes available, only two things change:
 2. `HttpHospitalApiAdapter.forward()` gets its body filled in per the real contract
 No changes to business logic.
 
+## Delivered updates (session 4, 2026-02-01)
+- **Deepgram model** bumped to `nova-3` (was `nova-2-general`)
+- **No blocking translation** — BGE-M3 handles multilingual directly. FAISS runs on the ORIGINAL transcript. Translation is now controlled by `TRANSLATE_FOR_AUDIT=false` (default off) and only used to enrich audit fields, never blocks the pipeline.
+- **UNKNOWN_SERVICE status** — new response field `status: "MATCHED" | "UNKNOWN_SERVICE"` on `/api/v1/intent/classify` and in the voice worker path. Reject conditions: top semantic < `MIN_SEMANTIC_THRESHOLD=0.35`, or LLM refuses to pick a catalog code.
+- **New table `unknown_requests`** with `raw_transcript`, `detected_language`, `top_semantic_score`, `top_candidate_code`, `review_status`. Alembic migration updated.
+- **Admin endpoints** — `GET /api/v1/unknown-requests?status=pending` and `PATCH /api/v1/unknown-requests/{id}` to update review status.
+- **Health endpoints renamed** — `/api/v1/healthz` (liveness) and `/api/v1/readyz` (checks Postgres, Redis, embedding model, FAISS index; returns 503 when not ready).
+- **Voice worker** persists unknown utterances into `unknown_requests` and replies with a graceful "noted for review" message.
+- **DTO** — added `status` and `raw_transcript` to `IntentClassifyOut`. Frontend `IntentResult` type updated in sync.
+- **README** replaced with the user-provided spec.
+
+## Standalone guarantee (unchanged)
+Every validated JSON is still persisted to Postgres and returned to the frontend.
+Hospital API remains an adapter port. No hardcoded URLs.
+
 ## Delivered in this session (2026-02-01)
 ### Root
 - `docker-compose.yml` (postgres, redis, livekit, backend, voice-agent, frontend)

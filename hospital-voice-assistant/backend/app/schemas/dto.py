@@ -53,11 +53,13 @@ class IntentSlots(BaseModel):
 
 
 class IntentClassifyOut(BaseModel):
+    status: str  # "MATCHED" | "UNKNOWN_SERVICE"
     service_code: Optional[str]
     service_name: Optional[str]
     confidence: float
     used_fallback: bool
     detected_language: Optional[str]
+    raw_transcript: str
     normalized_transcript_en: str
     slots: dict = {}
     top_candidates: list[dict] = []
