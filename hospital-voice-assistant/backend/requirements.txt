@@ -1,0 +1,44 @@
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+pydantic==2.10.4
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+
+# Database
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+psycopg2-binary==2.9.10
+alembic==1.14.0
+
+# Cache
+redis==5.2.1
+
+# ML / embeddings / vector search
+sentence-transformers==3.3.1
+faiss-cpu==1.9.0.post1
+numpy==1.26.4
+torch==2.5.1
+
+# LiveKit + realtime voice (plugins pull provider SDKs internally)
+livekit-api==1.1.1
+livekit-agents==1.6.4
+livekit-plugins-deepgram==1.6.4
+livekit-plugins-cartesia==1.6.4
+livekit-plugins-silero==1.6.4
+
+# LLM fallback
+groq==0.15.0
+
+# Language detection
+langdetect==1.0.9
+
+# Utilities
+httpx==0.28.1
+tenacity==9.0.0
+structlog==24.4.0
+python-multipart==0.0.20
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.25.0

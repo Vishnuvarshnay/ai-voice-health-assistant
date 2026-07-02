@@ -1,0 +1,70 @@
+<header class="topbar">
+  <div class="brand">
+    <span class="dot"></span>
+    <span>Hospital Voice Assistant</span>
+  </div>
+  <div class="status" [class.on]="connected()">
+    {{ connected() ? 'Connected' : (connecting() ? 'Connecting…' : 'Idle') }}
+  </div>
+</header>
+
+<main class="grid">
+  <section class="panel">
+    <h2>Voice Session</h2>
+    <div class="row">
+      <label>
+        Room
+        <input [(ngModel)]="roomName" [disabled]="connected()" />
+      </label>
+      <label>
+        Identity
+        <input [(ngModel)]="identity" [disabled]="connected()" />
+      </label>
+    </div>
+    <div class="row">
+      <button *ngIf="!connected()" (click)="joinRoom()" [disabled]="connecting()">
+        {{ connecting() ? 'Joining…' : 'Join Room' }}
+      </button>
+      <button *ngIf="connected()" class="danger" (click)="leaveRoom()">Leave</button>
+    </div>
+    <p class="hint">
+      Speak in any language after joining. The agent will greet you in English
+      and confirm your request via Cartesia TTS.
+    </p>
+    <p class="hint mono">LiveKit URL: {{ livekitUrl() }}</p>
+
+    <h3>Transcript</h3>
+    <div class="transcript">
+      <div *ngFor="let m of livekit.messages$ | async" class="msg" [class.agent]="m.role === 'agent'">
+        <span class="role">{{ m.role }}</span>
+        <span class="text">{{ m.text }}</span>
+      </div>
+      <div class="empty" *ngIf="(livekit.messages$ | async)?.length === 0">
+        (no messages yet)
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Test Intent Classifier</h2>
+    <p class="hint">
+      Skip the voice pipeline and classify a raw transcript directly. Useful
+      to verify the hybrid FAISS + rule engine + Groq fallback pipeline.
+    </p>
+    <textarea
+      rows="3"
+      [(ngModel)]="transcriptInput"
+      placeholder="e.g. Por favor, limpia mi habitación 305"
+    ></textarea>
+    <div class="row">
+      <button (click)="classifyText()" [disabled]="classifying() || !transcriptInput.trim()">
+        {{ classifying() ? 'Classifying…' : 'Classify' }}
+      </button>
+    </div>
+
+    <h3>Latest service request (JSON)</h3>
+    <pre class="json">{{ intentJson() || '(no result yet)' }}</pre>
+
+    <div class="error" *ngIf="error()">{{ error() }}</div>
+  </section>
+</main>

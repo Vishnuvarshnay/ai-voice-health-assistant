@@ -1,0 +1,169 @@
+[
+  {
+    "category_code": "housekeeping",
+    "code": "housekeeping.room_cleaning",
+    "name": "Room Cleaning",
+    "description": "Request housekeeping to clean the patient room.",
+    "example_utterances": [
+      "please clean my room",
+      "the room needs cleaning",
+      "can someone come and clean my floor",
+      "the bathroom is dirty, please send housekeeping",
+      "I need housekeeping in room 305"
+    ],
+    "keywords": ["clean", "cleaning", "housekeeping", "dirty", "sweep", "mop"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "housekeeping",
+    "code": "housekeeping.linen_change",
+    "name": "Linen / Bedsheet Change",
+    "description": "Request fresh bedsheets, pillowcases, or towels.",
+    "example_utterances": [
+      "I need fresh bedsheets",
+      "please change my pillow covers",
+      "can I get new towels",
+      "the sheets are dirty please replace them"
+    ],
+    "keywords": ["bedsheet", "sheet", "linen", "towel", "pillow", "cover"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "dietary",
+    "code": "dietary.meal_request",
+    "name": "Meal Request",
+    "description": "Request meal delivery or dietary preferences.",
+    "example_utterances": [
+      "I would like to order lunch",
+      "please bring me breakfast",
+      "can I get some dinner",
+      "I am hungry, I need food",
+      "please send my meal to room 210"
+    ],
+    "keywords": ["food", "meal", "breakfast", "lunch", "dinner", "hungry", "eat"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "dietary",
+    "code": "dietary.water_request",
+    "name": "Drinking Water",
+    "description": "Request drinking water or a beverage refill.",
+    "example_utterances": [
+      "please bring me some water",
+      "I need drinking water",
+      "can I get a glass of water",
+      "please refill my water jug"
+    ],
+    "keywords": ["water", "drink", "thirsty", "beverage", "juice"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "nursing",
+    "code": "nursing.nurse_call",
+    "name": "Nurse Assistance",
+    "description": "Call a nurse for non-emergency assistance.",
+    "example_utterances": [
+      "I need a nurse",
+      "please send a nurse to my room",
+      "can the nurse come and check on me",
+      "I need help from a nurse"
+    ],
+    "keywords": ["nurse", "assistance", "help", "attend"],
+    "required_slots": ["room_number"],
+    "priority": "high"
+  },
+  {
+    "category_code": "nursing",
+    "code": "nursing.medication",
+    "name": "Medication Reminder",
+    "description": "Request scheduled or as-needed medication delivery.",
+    "example_utterances": [
+      "I need my medicine",
+      "please bring my medication",
+      "it's time for my tablets",
+      "I forgot to take my pills"
+    ],
+    "keywords": ["medicine", "medication", "tablet", "pill", "drug", "prescription"],
+    "required_slots": ["room_number"],
+    "priority": "high"
+  },
+  {
+    "category_code": "medical",
+    "code": "medical.doctor_visit",
+    "name": "Doctor Visit",
+    "description": "Request the attending doctor to visit.",
+    "example_utterances": [
+      "I want to see the doctor",
+      "please call the doctor",
+      "can the doctor visit me",
+      "I would like a consultation"
+    ],
+    "keywords": ["doctor", "physician", "consultation", "visit"],
+    "required_slots": ["room_number"],
+    "priority": "high"
+  },
+  {
+    "category_code": "medical",
+    "code": "medical.emergency",
+    "name": "Medical Emergency",
+    "description": "Signal a medical emergency requiring immediate attention.",
+    "example_utterances": [
+      "I am having chest pain",
+      "I cannot breathe",
+      "help me it is an emergency",
+      "I feel like I'm going to faint"
+    ],
+    "keywords": ["emergency", "chest pain", "cannot breathe", "faint", "urgent", "help"],
+    "required_slots": ["room_number"],
+    "priority": "critical"
+  },
+  {
+    "category_code": "facilities",
+    "code": "facilities.temperature",
+    "name": "Room Temperature Adjustment",
+    "description": "Adjust air conditioning or heating in the room.",
+    "example_utterances": [
+      "the room is too cold",
+      "please turn up the heat",
+      "can you lower the AC temperature",
+      "it is too hot in here"
+    ],
+    "keywords": ["cold", "hot", "temperature", "ac", "heater", "heating", "air conditioning"],
+    "required_slots": ["room_number"],
+    "priority": "low"
+  },
+  {
+    "category_code": "administrative",
+    "code": "administrative.discharge",
+    "name": "Discharge Enquiry",
+    "description": "Enquire about discharge process, timing, or paperwork.",
+    "example_utterances": [
+      "when can I be discharged",
+      "I want to check out of the hospital",
+      "please start my discharge process",
+      "can I go home today"
+    ],
+    "keywords": ["discharge", "check out", "leave", "go home", "release"],
+    "required_slots": [],
+    "priority": "normal"
+  },
+  {
+    "category_code": "administrative",
+    "code": "administrative.billing",
+    "name": "Billing Enquiry",
+    "description": "Question about bills, invoices, or payment.",
+    "example_utterances": [
+      "I have a question about my bill",
+      "how much do I owe",
+      "please explain my invoice",
+      "I need to make a payment"
+    ],
+    "keywords": ["bill", "invoice", "payment", "charge", "cost", "money"],
+    "required_slots": [],
+    "priority": "normal"
+  }
+]

@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+dist/
+.angular/
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.faiss
+*.pkl
