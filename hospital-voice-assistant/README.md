@@ -44,8 +44,9 @@ Once up:
 
 ## 3. First run – seed the service catalog
 
-The classifier needs a catalog of hospital services to match against.
-A default seed is provided in `backend/app/seed/default_services.json`.
+The catalog ships with **44 real hospital services across 9 categories**
+(Cleaning, AC, TV, Laundry, Electrical, Maintenance, Patient Support,
+Patient Diet, Service Complaint) in `backend/app/seed/default_services.json`.
 
 Load it into Postgres and build the FAISS index:
 
@@ -53,8 +54,42 @@ Load it into Postgres and build the FAISS index:
 docker compose exec backend python -m app.seed.seed_services
 ```
 
-To use **your own** service list, edit `backend/app/seed/default_services.json`
-(or POST to `/api/v1/services`) and re-run the seeder.
+To customize, edit `backend/app/seed/default_services.json` (each row has
+`code`, `name`, `description`, `example_utterances`, `keywords`,
+`required_slots`, `priority`) and re-run the seeder — or POST to
+`/api/v1/services` and then `POST /api/v1/services/rebuild-index`.
+
+### Forward to your own hospital API (optional)
+
+Every confirmed service request will be auto-POSTed to your hospital
+management API when you set these two variables in `.env`:
+
+```
+HOSPITAL_API_URL=https://your-hospital-api.example.com/requests
+HOSPITAL_API_KEY=your-optional-bearer-token
+```
+
+Payload shape:
+
+```json
+{
+  "service_code": "ROOM_CLEANING",
+  "service_name": "Room Cleaning",
+  "category": "CLEANING",
+  "priority": "normal",
+  "raw_transcript": "मेरा कमरा साफ़ करा दीजिए 305",
+  "normalized_transcript_en": "Please clean my room 305",
+  "detected_language": "hi",
+  "confidence": 0.91,
+  "used_fallback": false,
+  "slots": { "room_number": "305" },
+  "room_name": "hva-1234",
+  "identity": "patient-42"
+}
+```
+
+If the webhook is not set, the pipeline still persists to Postgres and
+returns the JSON to the caller — the forwarder is purely additive.
 
 ## 4. Try it
 

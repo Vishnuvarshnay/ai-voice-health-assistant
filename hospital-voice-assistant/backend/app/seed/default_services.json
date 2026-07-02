@@ -1,169 +1,716 @@
 [
   {
-    "category_code": "housekeeping",
-    "code": "housekeeping.room_cleaning",
+    "category_code": "CLEANING",
+    "code": "ROOM_CLEANING",
     "name": "Room Cleaning",
-    "description": "Request housekeeping to clean the patient room.",
+    "description": "Housekeeping request to clean the patient room floor and surfaces.",
     "example_utterances": [
       "please clean my room",
-      "the room needs cleaning",
-      "can someone come and clean my floor",
-      "the bathroom is dirty, please send housekeeping",
-      "I need housekeeping in room 305"
+      "my room needs cleaning",
+      "can someone come and sweep and mop the floor",
+      "the room is dirty, please send housekeeping",
+      "i need housekeeping for my room",
+      "please send someone to clean the room"
     ],
-    "keywords": ["clean", "cleaning", "housekeeping", "dirty", "sweep", "mop"],
+    "keywords": ["clean room", "room cleaning", "sweep", "mop", "housekeeping", "dust", "dirty floor"],
     "required_slots": ["room_number"],
     "priority": "normal"
   },
   {
-    "category_code": "housekeeping",
-    "code": "housekeeping.linen_change",
-    "name": "Linen / Bedsheet Change",
-    "description": "Request fresh bedsheets, pillowcases, or towels.",
+    "category_code": "CLEANING",
+    "code": "WASHROOM_CLEANING",
+    "name": "Washroom Cleaning",
+    "description": "Clean the attached bathroom / toilet / washroom.",
     "example_utterances": [
-      "I need fresh bedsheets",
-      "please change my pillow covers",
-      "can I get new towels",
-      "the sheets are dirty please replace them"
+      "the washroom is dirty",
+      "please clean the bathroom",
+      "toilet needs cleaning",
+      "please send someone to clean the washroom",
+      "the toilet is smelly, please clean",
+      "the bathroom floor is wet and dirty"
     ],
-    "keywords": ["bedsheet", "sheet", "linen", "towel", "pillow", "cover"],
+    "keywords": ["washroom", "bathroom", "toilet", "clean", "dirty"],
     "required_slots": ["room_number"],
     "priority": "normal"
   },
   {
-    "category_code": "dietary",
-    "code": "dietary.meal_request",
-    "name": "Meal Request",
-    "description": "Request meal delivery or dietary preferences.",
+    "category_code": "CLEANING",
+    "code": "BEDPAN_CLEANING",
+    "name": "Bedpan Cleaning",
+    "description": "Empty and clean the patient's bedpan / urinal.",
     "example_utterances": [
-      "I would like to order lunch",
-      "please bring me breakfast",
-      "can I get some dinner",
-      "I am hungry, I need food",
-      "please send my meal to room 210"
+      "please clean the bedpan",
+      "the bedpan needs to be emptied",
+      "urinal needs cleaning",
+      "please dispose of the bedpan contents",
+      "empty the bedpan please"
     ],
-    "keywords": ["food", "meal", "breakfast", "lunch", "dinner", "hungry", "eat"],
-    "required_slots": ["room_number"],
-    "priority": "normal"
-  },
-  {
-    "category_code": "dietary",
-    "code": "dietary.water_request",
-    "name": "Drinking Water",
-    "description": "Request drinking water or a beverage refill.",
-    "example_utterances": [
-      "please bring me some water",
-      "I need drinking water",
-      "can I get a glass of water",
-      "please refill my water jug"
-    ],
-    "keywords": ["water", "drink", "thirsty", "beverage", "juice"],
-    "required_slots": ["room_number"],
-    "priority": "normal"
-  },
-  {
-    "category_code": "nursing",
-    "code": "nursing.nurse_call",
-    "name": "Nurse Assistance",
-    "description": "Call a nurse for non-emergency assistance.",
-    "example_utterances": [
-      "I need a nurse",
-      "please send a nurse to my room",
-      "can the nurse come and check on me",
-      "I need help from a nurse"
-    ],
-    "keywords": ["nurse", "assistance", "help", "attend"],
+    "keywords": ["bedpan", "urinal", "pan", "empty"],
     "required_slots": ["room_number"],
     "priority": "high"
   },
   {
-    "category_code": "nursing",
-    "code": "nursing.medication",
-    "name": "Medication Reminder",
-    "description": "Request scheduled or as-needed medication delivery.",
+    "category_code": "CLEANING",
+    "code": "BED_CLEANING",
+    "name": "Bed Cleaning",
+    "description": "Wipe and disinfect the patient bed surface.",
     "example_utterances": [
-      "I need my medicine",
-      "please bring my medication",
-      "it's time for my tablets",
-      "I forgot to take my pills"
+      "please clean my bed",
+      "the bed is dirty",
+      "can you wipe the bed",
+      "disinfect my bed please",
+      "there is a spill on my bed"
     ],
-    "keywords": ["medicine", "medication", "tablet", "pill", "drug", "prescription"],
+    "keywords": ["bed clean", "clean bed", "wipe bed", "disinfect bed"],
     "required_slots": ["room_number"],
-    "priority": "high"
+    "priority": "normal"
   },
+
   {
-    "category_code": "medical",
-    "code": "medical.doctor_visit",
-    "name": "Doctor Visit",
-    "description": "Request the attending doctor to visit.",
+    "category_code": "AC",
+    "code": "AC_REMOTE_REQUIRED",
+    "name": "AC Remote Required",
+    "description": "Patient needs the air-conditioner remote control.",
     "example_utterances": [
-      "I want to see the doctor",
-      "please call the doctor",
-      "can the doctor visit me",
-      "I would like a consultation"
+      "i need the ac remote",
+      "please give me the air conditioner remote",
+      "ac remote is missing",
+      "can i get the remote for the ac",
+      "there is no ac remote in the room"
     ],
-    "keywords": ["doctor", "physician", "consultation", "visit"],
-    "required_slots": ["room_number"],
-    "priority": "high"
-  },
-  {
-    "category_code": "medical",
-    "code": "medical.emergency",
-    "name": "Medical Emergency",
-    "description": "Signal a medical emergency requiring immediate attention.",
-    "example_utterances": [
-      "I am having chest pain",
-      "I cannot breathe",
-      "help me it is an emergency",
-      "I feel like I'm going to faint"
-    ],
-    "keywords": ["emergency", "chest pain", "cannot breathe", "faint", "urgent", "help"],
-    "required_slots": ["room_number"],
-    "priority": "critical"
-  },
-  {
-    "category_code": "facilities",
-    "code": "facilities.temperature",
-    "name": "Room Temperature Adjustment",
-    "description": "Adjust air conditioning or heating in the room.",
-    "example_utterances": [
-      "the room is too cold",
-      "please turn up the heat",
-      "can you lower the AC temperature",
-      "it is too hot in here"
-    ],
-    "keywords": ["cold", "hot", "temperature", "ac", "heater", "heating", "air conditioning"],
+    "keywords": ["ac remote", "air conditioner remote", "remote"],
     "required_slots": ["room_number"],
     "priority": "low"
   },
   {
-    "category_code": "administrative",
-    "code": "administrative.discharge",
-    "name": "Discharge Enquiry",
-    "description": "Enquire about discharge process, timing, or paperwork.",
+    "category_code": "AC",
+    "code": "AC_NOT_WORKING",
+    "name": "AC Not Working",
+    "description": "The air conditioner is completely non-functional.",
     "example_utterances": [
-      "when can I be discharged",
-      "I want to check out of the hospital",
-      "please start my discharge process",
-      "can I go home today"
+      "the ac is not working",
+      "air conditioner is not turning on",
+      "ac is dead",
+      "ac has stopped working",
+      "the air conditioner is off and won't start"
     ],
-    "keywords": ["discharge", "check out", "leave", "go home", "release"],
+    "keywords": ["ac not working", "ac not turning on", "ac dead", "ac stopped"],
+    "required_slots": ["room_number"],
+    "priority": "high"
+  },
+  {
+    "category_code": "AC",
+    "code": "AC_NOT_COOLING",
+    "name": "AC Not Cooling",
+    "description": "AC is running but not cooling the room properly.",
+    "example_utterances": [
+      "the ac is not cooling",
+      "air conditioner is on but the room is hot",
+      "ac cooling is poor",
+      "room is warm even with ac on",
+      "ac is running but no cold air"
+    ],
+    "keywords": ["ac not cooling", "not cooling", "poor cooling", "room hot", "warm"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "AC",
+    "code": "AC_ASSISTANCE",
+    "name": "AC Assistance",
+    "description": "Generic help required with the AC (settings, mode, temperature).",
+    "example_utterances": [
+      "i need help with the ac",
+      "how do i set the ac temperature",
+      "please adjust the ac for me",
+      "ac needs assistance",
+      "please change the ac mode"
+    ],
+    "keywords": ["ac help", "ac assistance", "ac adjust", "ac settings", "ac temperature"],
+    "required_slots": ["room_number"],
+    "priority": "low"
+  },
+
+  {
+    "category_code": "TV",
+    "code": "TV_REMOTE_REQUIRED",
+    "name": "TV Remote Required",
+    "description": "Patient needs the television remote control.",
+    "example_utterances": [
+      "i need the tv remote",
+      "television remote is missing",
+      "please give me the tv remote",
+      "no remote for the tv",
+      "can i get the tv remote"
+    ],
+    "keywords": ["tv remote", "television remote", "remote"],
+    "required_slots": ["room_number"],
+    "priority": "low"
+  },
+  {
+    "category_code": "TV",
+    "code": "TV_CHANNELS_NOT_COMING",
+    "name": "TV Channels Not Coming",
+    "description": "TV is powered on but channels are not tuning in.",
+    "example_utterances": [
+      "tv channels are not coming",
+      "no channels on the tv",
+      "cable is not working on the tv",
+      "television is showing no signal",
+      "tv channels missing"
+    ],
+    "keywords": ["channels not coming", "no channels", "no signal", "cable not working"],
+    "required_slots": ["room_number"],
+    "priority": "low"
+  },
+  {
+    "category_code": "TV",
+    "code": "TV_NOT_WORKING",
+    "name": "TV Not Working",
+    "description": "TV is completely non-functional.",
+    "example_utterances": [
+      "the tv is not working",
+      "television is not turning on",
+      "tv is dead",
+      "tv screen is blank",
+      "television not switching on"
+    ],
+    "keywords": ["tv not working", "tv dead", "television not working", "blank screen"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "TV",
+    "code": "TV_ASSISTANCE",
+    "name": "TV Assistance",
+    "description": "Generic help with the TV (volume, input, tuning).",
+    "example_utterances": [
+      "i need help with the tv",
+      "please assist me with the television",
+      "how do i change the input on the tv",
+      "please tune the tv for me",
+      "tv assistance please"
+    ],
+    "keywords": ["tv help", "tv assistance", "tv tuning", "tv input", "tv volume"],
+    "required_slots": ["room_number"],
+    "priority": "low"
+  },
+
+  {
+    "category_code": "LAUNDRY",
+    "code": "PATIENT_GOWN_REQUIRED",
+    "name": "Patient Gown Required",
+    "description": "Patient needs a fresh hospital gown.",
+    "example_utterances": [
+      "i need a patient gown",
+      "please bring me a hospital gown",
+      "i need a fresh gown",
+      "gown please",
+      "can i get another patient gown"
+    ],
+    "keywords": ["patient gown", "gown", "hospital gown"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "LAUNDRY",
+    "code": "BEDSHEET_REQUIRED",
+    "name": "Bedsheet Required",
+    "description": "Patient needs a fresh bedsheet.",
+    "example_utterances": [
+      "i need a fresh bedsheet",
+      "please change the bedsheet",
+      "bring me a new bed sheet",
+      "the bedsheet is dirty please replace",
+      "clean bedsheet please"
+    ],
+    "keywords": ["bedsheet", "bed sheet", "sheet", "linen"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "LAUNDRY",
+    "code": "BATH_TOWEL",
+    "name": "Bath Towel",
+    "description": "Patient needs a fresh bath towel.",
+    "example_utterances": [
+      "i need a bath towel",
+      "please bring me a fresh towel",
+      "can i get a towel",
+      "towel please",
+      "no towel in the bathroom"
+    ],
+    "keywords": ["bath towel", "towel"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "LAUNDRY",
+    "code": "PILLOW_REQUIRED",
+    "name": "Pillow Required",
+    "description": "Patient needs an extra pillow or a fresh pillow cover.",
+    "example_utterances": [
+      "i need a pillow",
+      "please give me an extra pillow",
+      "pillow cover is dirty",
+      "can i get a fresh pillow",
+      "please bring one more pillow"
+    ],
+    "keywords": ["pillow", "pillow cover", "cushion"],
+    "required_slots": ["room_number"],
+    "priority": "low"
+  },
+
+  {
+    "category_code": "ELECTRICAL",
+    "code": "ELECTRIC_SOCKET_NOT_WORKING",
+    "name": "Electric Socket Not Working",
+    "description": "Power socket / plug point is not delivering electricity.",
+    "example_utterances": [
+      "the electric socket is not working",
+      "plug point is dead",
+      "power socket has no current",
+      "the wall socket is not working",
+      "socket is not giving power"
+    ],
+    "keywords": ["socket not working", "plug point", "power socket", "wall socket", "no current"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "ELECTRICAL",
+    "code": "FAN_NOT_WORKING",
+    "name": "Fan Not Working",
+    "description": "Ceiling or table fan is not functioning.",
+    "example_utterances": [
+      "the fan is not working",
+      "ceiling fan is not turning on",
+      "fan is dead",
+      "the fan has stopped",
+      "please fix the fan"
+    ],
+    "keywords": ["fan not working", "fan dead", "ceiling fan", "table fan"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "ELECTRICAL",
+    "code": "GEYSER_NOT_WORKING",
+    "name": "Geyser Not Working",
+    "description": "Water heater / geyser is not producing hot water.",
+    "example_utterances": [
+      "the geyser is not working",
+      "water heater is not heating",
+      "no hot water from the geyser",
+      "geyser is dead",
+      "please fix the water heater"
+    ],
+    "keywords": ["geyser", "water heater", "no hot water", "heater not working"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "ELECTRICAL",
+    "code": "ELECTRIC_SOCKET_CHARGED",
+    "name": "Electric Socket Charged / Shock Risk",
+    "description": "Live current / shock reported at the socket - electrical safety issue.",
+    "example_utterances": [
+      "the socket is giving shock",
+      "electric socket is charged",
+      "i got a shock from the plug point",
+      "there is current in the metal near the socket",
+      "socket seems dangerous, giving shock"
+    ],
+    "keywords": ["shock", "charged", "current leak", "live socket", "electric shock"],
+    "required_slots": ["room_number"],
+    "priority": "critical"
+  },
+
+  {
+    "category_code": "MAINTENANCE",
+    "code": "TAP_LEAKING",
+    "name": "Tap Leaking",
+    "description": "Water tap / faucet is leaking.",
+    "example_utterances": [
+      "the tap is leaking",
+      "faucet is dripping",
+      "water is leaking from the tap",
+      "the tap won't close properly",
+      "there is a leaking tap"
+    ],
+    "keywords": ["tap leak", "faucet", "dripping", "leaking tap", "water leak"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "MAINTENANCE",
+    "code": "PLUMBER_REQUIRED",
+    "name": "Plumber Required",
+    "description": "General plumbing help needed.",
+    "example_utterances": [
+      "i need a plumber",
+      "please send a plumber to my room",
+      "there is a plumbing issue",
+      "plumber required for the washroom",
+      "we have a plumbing problem"
+    ],
+    "keywords": ["plumber", "plumbing"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "MAINTENANCE",
+    "code": "WATER_DRAINAGE_ISSUE",
+    "name": "Water Drainage Issue",
+    "description": "Water is not draining or drainage is blocked.",
+    "example_utterances": [
+      "water is not draining",
+      "the drain is blocked",
+      "washroom is flooding, water not going down",
+      "sink is clogged",
+      "drainage problem in the bathroom"
+    ],
+    "keywords": ["drain blocked", "drainage", "clogged", "flooding", "not draining"],
+    "required_slots": ["room_number"],
+    "priority": "high"
+  },
+  {
+    "category_code": "MAINTENANCE",
+    "code": "WALL_MENDING",
+    "name": "Wall Mending",
+    "description": "Wall damage / plaster / paint needs mending.",
+    "example_utterances": [
+      "the wall needs repair",
+      "plaster is coming off the wall",
+      "there is a hole in the wall",
+      "wall mending required",
+      "please repair the wall in my room"
+    ],
+    "keywords": ["wall repair", "wall mending", "plaster", "hole in wall", "paint"],
+    "required_slots": ["room_number"],
+    "priority": "low"
+  },
+  {
+    "category_code": "MAINTENANCE",
+    "code": "WATER_SEEPAGE",
+    "name": "Water Seepage",
+    "description": "Water is seeping through the wall or ceiling.",
+    "example_utterances": [
+      "there is water seepage in my room",
+      "water is coming from the ceiling",
+      "the wall is wet due to seepage",
+      "seepage from the ceiling",
+      "damp patch on the wall due to water"
+    ],
+    "keywords": ["seepage", "damp", "leak from ceiling", "wet wall", "leaking wall"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "MAINTENANCE",
+    "code": "CARPENTER_REQUIRED",
+    "name": "Carpenter Required",
+    "description": "Carpentry work needed (door, furniture, wood).",
+    "example_utterances": [
+      "i need a carpenter",
+      "the door is broken, please send a carpenter",
+      "the cupboard is damaged",
+      "furniture repair needed",
+      "please send a carpenter for wood repair"
+    ],
+    "keywords": ["carpenter", "wood repair", "door broken", "furniture repair", "cupboard"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+
+  {
+    "category_code": "PATIENT_SUPPORT",
+    "code": "MALE_PCA_REQUIRED",
+    "name": "Male PCA Required",
+    "description": "A male patient care attendant is needed to assist the patient.",
+    "example_utterances": [
+      "i need a male attendant",
+      "please send a male pca",
+      "male patient care attendant required",
+      "need a male helper for the patient",
+      "male ward boy please"
+    ],
+    "keywords": ["male pca", "male attendant", "male helper", "male ward boy"],
+    "required_slots": ["room_number"],
+    "priority": "high"
+  },
+  {
+    "category_code": "PATIENT_SUPPORT",
+    "code": "FEMALE_PCA_REQUIRED",
+    "name": "Female PCA Required",
+    "description": "A female patient care attendant is needed to assist the patient.",
+    "example_utterances": [
+      "i need a female attendant",
+      "please send a female pca",
+      "female patient care attendant required",
+      "need a female helper for the patient",
+      "female nurse aide please"
+    ],
+    "keywords": ["female pca", "female attendant", "female helper", "female nurse aide"],
+    "required_slots": ["room_number"],
+    "priority": "high"
+  },
+  {
+    "category_code": "PATIENT_SUPPORT",
+    "code": "PATIENT_URINE_DISCHARGE",
+    "name": "Patient Urine Discharge Assistance",
+    "description": "Assistance needed for patient urine discharge / catheter bag emptying.",
+    "example_utterances": [
+      "patient needs help with urine discharge",
+      "please empty the urine bag",
+      "catheter bag is full",
+      "patient wants to urinate, need help",
+      "urine bag needs to be emptied"
+    ],
+    "keywords": ["urine discharge", "urine bag", "catheter bag", "urinate help"],
+    "required_slots": ["room_number"],
+    "priority": "high"
+  },
+  {
+    "category_code": "PATIENT_SUPPORT",
+    "code": "PATIENT_GOWN_CHANGE",
+    "name": "Patient Gown Change Assistance",
+    "description": "Help required to change the patient's gown.",
+    "example_utterances": [
+      "please help me change the patient gown",
+      "patient's gown needs to be changed",
+      "assistance for changing gown",
+      "help changing the hospital gown",
+      "please change my gown"
+    ],
+    "keywords": ["change gown", "gown change", "change patient gown"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+
+  {
+    "category_code": "PATIENT_DIET",
+    "code": "THALI",
+    "name": "Thali Meal",
+    "description": "Standard Indian thali meal (full plate).",
+    "example_utterances": [
+      "please bring me a thali",
+      "i want to order a thali meal",
+      "thali for lunch please",
+      "send a full thali",
+      "i would like a thali"
+    ],
+    "keywords": ["thali", "full meal", "full plate", "indian meal"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "PATIENT_DIET",
+    "code": "CORNFLAKES",
+    "name": "Cornflakes",
+    "description": "Cornflakes with milk for breakfast.",
+    "example_utterances": [
+      "i want cornflakes for breakfast",
+      "please bring cornflakes with milk",
+      "can i have some cornflakes",
+      "cornflakes please",
+      "send cornflakes to my room"
+    ],
+    "keywords": ["cornflakes"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "PATIENT_DIET",
+    "code": "TEA",
+    "name": "Tea",
+    "description": "A cup of tea.",
+    "example_utterances": [
+      "please bring me tea",
+      "i want a cup of tea",
+      "can i get some chai",
+      "tea please",
+      "send tea to my room"
+    ],
+    "keywords": ["tea", "chai"],
+    "required_slots": ["room_number"],
+    "priority": "low"
+  },
+  {
+    "category_code": "PATIENT_DIET",
+    "code": "OATS",
+    "name": "Oats",
+    "description": "Oats / oatmeal for breakfast.",
+    "example_utterances": [
+      "i would like oats for breakfast",
+      "please bring me oatmeal",
+      "can i have oats",
+      "send oats to my room",
+      "oats please"
+    ],
+    "keywords": ["oats", "oatmeal"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "PATIENT_DIET",
+    "code": "BISCUITS",
+    "name": "Biscuits",
+    "description": "Snack biscuits with tea or coffee.",
+    "example_utterances": [
+      "please bring me biscuits",
+      "can i get some biscuits",
+      "i want some cookies",
+      "biscuits please",
+      "send biscuits with the tea"
+    ],
+    "keywords": ["biscuit", "biscuits", "cookies"],
+    "required_slots": ["room_number"],
+    "priority": "low"
+  },
+  {
+    "category_code": "PATIENT_DIET",
+    "code": "PORRIDGE",
+    "name": "Porridge",
+    "description": "Wheat / rice porridge (dalia / kheer style).",
+    "example_utterances": [
+      "please bring me porridge",
+      "i would like some dalia",
+      "can i get porridge for breakfast",
+      "porridge please",
+      "send some warm porridge"
+    ],
+    "keywords": ["porridge", "dalia", "kanji"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "PATIENT_DIET",
+    "code": "BOILED_EGGS",
+    "name": "Boiled Eggs",
+    "description": "Boiled eggs.",
+    "example_utterances": [
+      "i want boiled eggs",
+      "please bring me two boiled eggs",
+      "boiled eggs for breakfast",
+      "can i get eggs boiled",
+      "send boiled eggs"
+    ],
+    "keywords": ["boiled eggs", "egg", "eggs"],
+    "required_slots": ["room_number", "quantity"],
+    "priority": "normal"
+  },
+
+  {
+    "category_code": "SERVICE_COMPLAINT",
+    "code": "DOCTOR_CONSULTATION_DELAY",
+    "name": "Doctor Consultation Delay",
+    "description": "Complaint about delay in doctor consultation / rounds.",
+    "example_utterances": [
+      "the doctor has not come yet",
+      "there is a delay in doctor consultation",
+      "doctor is late for rounds",
+      "we have been waiting for the doctor",
+      "doctor visit is delayed"
+    ],
+    "keywords": ["doctor delay", "doctor late", "doctor not come", "consultation delay", "rounds delay"],
+    "required_slots": ["room_number"],
+    "priority": "high"
+  },
+  {
+    "category_code": "SERVICE_COMPLAINT",
+    "code": "LAB_SERVICE_DELAY",
+    "name": "Lab Service Delay",
+    "description": "Complaint about delay in lab sample collection or reports.",
+    "example_utterances": [
+      "lab report is delayed",
+      "sample collection is late",
+      "lab has not come to collect the sample",
+      "there is a delay in lab service",
+      "when will the lab report come"
+    ],
+    "keywords": ["lab delay", "lab report", "sample collection", "lab service", "report delay"],
+    "required_slots": ["room_number"],
+    "priority": "normal"
+  },
+  {
+    "category_code": "SERVICE_COMPLAINT",
+    "code": "REGISTRATION_DELAY",
+    "name": "Registration Delay",
+    "description": "Complaint about delay at registration / admission counter.",
+    "example_utterances": [
+      "registration is taking too long",
+      "delay at admission counter",
+      "we have been waiting for registration",
+      "the registration process is slow",
+      "admission is delayed"
+    ],
+    "keywords": ["registration delay", "admission delay", "counter wait"],
     "required_slots": [],
     "priority": "normal"
   },
   {
-    "category_code": "administrative",
-    "code": "administrative.billing",
-    "name": "Billing Enquiry",
-    "description": "Question about bills, invoices, or payment.",
+    "category_code": "SERVICE_COMPLAINT",
+    "code": "BILLING_DELAY",
+    "name": "Billing Delay",
+    "description": "Complaint about delay in billing or discharge paperwork.",
     "example_utterances": [
-      "I have a question about my bill",
-      "how much do I owe",
-      "please explain my invoice",
-      "I need to make a payment"
+      "billing is delayed",
+      "discharge bill is not ready",
+      "we are waiting for the bill",
+      "delay in generating the invoice",
+      "billing counter is slow"
     ],
-    "keywords": ["bill", "invoice", "payment", "charge", "cost", "money"],
+    "keywords": ["billing delay", "bill delay", "invoice delay", "discharge bill"],
     "required_slots": [],
+    "priority": "normal"
+  },
+  {
+    "category_code": "SERVICE_COMPLAINT",
+    "code": "UNRESPONSIVE_STAFF",
+    "name": "Unresponsive Staff",
+    "description": "Complaint that staff is not responding to calls or requests.",
+    "example_utterances": [
+      "staff is not responding",
+      "no one is coming when i call",
+      "the nurse is not responding",
+      "staff is ignoring my requests",
+      "we have been ringing the bell for a long time"
+    ],
+    "keywords": ["unresponsive", "not responding", "no response", "ignoring", "bell not answered"],
+    "required_slots": ["room_number"],
+    "priority": "high"
+  },
+  {
+    "category_code": "SERVICE_COMPLAINT",
+    "code": "STAFF_BEHAVIOR_IMPOLITE",
+    "name": "Staff Behavior Impolite",
+    "description": "Complaint about rude / impolite behavior by hospital staff.",
+    "example_utterances": [
+      "the staff was rude",
+      "nurse behavior is impolite",
+      "staff spoke very rudely",
+      "we want to complain about staff behavior",
+      "the attendant misbehaved"
+    ],
+    "keywords": ["rude", "impolite", "misbehave", "behavior complaint", "staff behavior"],
+    "required_slots": ["room_number"],
+    "priority": "high"
+  },
+  {
+    "category_code": "SERVICE_COMPLAINT",
+    "code": "ADEQUATE_INFORMATION_NOT_BEING_PROVIDED",
+    "name": "Adequate Information Not Being Provided",
+    "description": "Complaint that adequate information about treatment / process is not being provided.",
+    "example_utterances": [
+      "no one is giving us proper information",
+      "we are not being informed about the treatment",
+      "please tell us what is happening",
+      "information is not being shared with us",
+      "we don't know what is going on"
+    ],
+    "keywords": ["no information", "not informed", "information not provided", "unclear", "not explained"],
+    "required_slots": ["room_number"],
     "priority": "normal"
   }
 ]

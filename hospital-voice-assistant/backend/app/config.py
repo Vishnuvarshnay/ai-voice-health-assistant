@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
+    # Hospital API (optional webhook)
+    HOSPITAL_API_URL: str = ""
+    HOSPITAL_API_KEY: str = ""
+
     # Intent classifier
     EMBEDDING_MODEL: str = "BAAI/bge-m3"
     CONFIDENCE_THRESHOLD: float = 0.85

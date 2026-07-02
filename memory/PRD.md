@@ -42,45 +42,33 @@ angular (4200)  ─►  fastapi (8000)  ─►  postgres (5432)
 ## Delivered in this session (2026-02-01)
 ### Root
 - `docker-compose.yml` (postgres, redis, livekit, backend, voice-agent, frontend)
-- `.env.example` with all keys as placeholders
-- `README.md` with quickstart, seed instructions, API surface, layout
+- `.env.example` with all keys as placeholders (+ optional `HOSPITAL_API_URL`)
+- `README.md` with quickstart, seed instructions, hospital-API forwarder docs
 - `infrastructure/livekit/livekit.yaml` (self-hosted config)
 
 ### Backend (`/backend`)
-- `Dockerfile`, `requirements.txt`
-- `app/config.py` — pydantic-settings, env-driven
-- `app/db/session.py` — async SQLAlchemy engine + `Base`
-- `app/models/orm.py` — `ServiceCategory`, `HospitalService`, `VoiceSession`, `ServiceRequest`
-- `app/schemas/dto.py` — Pydantic v2 DTOs
-- `app/repositories/service_repo.py`, `request_repo.py`
-- `app/services/embedding_service.py` — BGE-M3 async wrapper
-- `app/services/faiss_index.py` — cosine-IP FAISS index over utterances
-- `app/services/rule_engine.py` — keyword scoring + slot extraction (room/time/qty)
-- `app/services/llm_fallback.py` — Groq JSON mode + translation helper
-- `app/services/intent_classifier.py` — hybrid scoring (0.6·semantic + 0.4·rule) + LLM fallback under 0.85
-- `app/services/livekit_service.py` — token mint
-- `app/api/v1/` — `/health`, `/ready`, `/services`, `/services/rebuild-index`, `/intent/classify`, `/voice/token`, `/requests`
-- `app/core/logging.py` — structlog JSON + latency context manager
-- `app/core/startup.py` — loads BGE-M3 + FAISS on FastAPI startup
-- `app/main.py` — FastAPI + lifespan
-- `app/worker/voice_agent.py` — LiveKit `AgentSession` with Deepgram STT, Cartesia TTS, Silero VAD; classifies each final transcript and speaks confirmation; greets in <500 ms
-- `app/seed/default_services.json` — 11 default hospital services across 6 categories
-- `app/seed/seed_services.py` — CLI that seeds DB and rebuilds FAISS
-- `alembic/` — initial migration `0001_initial`
-- `tests/test_rule_engine.py` — passes (`2 passed`)
+- Full clean-architecture layout (config, db, models, schemas, repositories, services, api, core, worker, seed)
+- Hybrid intent classifier: BGE-M3 embeddings → FAISS cosine → rule engine (keyword + slot) → Groq `llama-3.3-70b-versatile` fallback below 0.85
+- LiveKit `AgentSession` worker: Deepgram STT (`multi`) + Cartesia (`sonic-2`) TTS + Silero VAD, greets in <500 ms, persists every request
+- Optional webhook `hospital_api.forward` — POSTs the confirmed JSON to `HOSPITAL_API_URL` (user's hospital management API) with retry/backoff
+- REST surface: `/api/v1/{health,ready,services,intent/classify,voice/token,requests}` + `POST /services/rebuild-index`
+- Alembic initial migration
+- Real catalog seeded (44 services, 9 categories exactly as user provided)
+- `tests/test_rule_engine.py` (passes)
 
 ### Frontend (`/frontend`) — Angular 17 standalone
-- `Dockerfile`, `package.json` (livekit-client 2.5.7)
-- `angular.json`, `tsconfig*.json`
-- `src/app/services/api.service.ts` — token mint + intent classification
-- `src/app/services/livekit.service.ts` — Room lifecycle + mic publish + attached remote audio
-- `src/app/app.component.{ts,html,css}` — dark themed panel: join room, live transcript, direct intent test, JSON output
+- LiveKit-client 2.5.7, dark themed panel: join room, live transcript, direct intent-test panel with pretty JSON
+
+## Delivered updates (session 2, 2026-02-01)
+- **Real service catalog**: replaced defaults with the 44 services provided by the user (Cleaning 4 · AC 4 · TV 4 · Laundry 4 · Electrical 4 · Maintenance 6 · Patient Support 4 · Patient Diet 7 · Service Complaint 7)
+- **Hospital API webhook**: `HOSPITAL_API_URL` + `HOSPITAL_API_KEY` in `.env` → every confirmed request forwarded as JSON with tenacity retry
+- README documents the forwarder + payload shape
 
 ## Validation
 - `python -m pytest tests/ -v` → 2/2 passing
-- `ruff` (via lint agent) → zero errors
+- `ruff` → zero errors
 - `tsc --noEmit` (strict) → clean
-- All 38 backend Python files parse OK
+- 39 backend Python files parse OK; 44 seed services, all codes unique
 
 ## Known caveats (all safe to defer)
 - BGE-M3 model download (~2 GB) happens on first backend container boot;

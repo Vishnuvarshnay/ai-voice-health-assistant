@@ -21,12 +21,15 @@ DATA_FILE = Path(__file__).parent / "default_services.json"
 
 
 CATEGORY_NAMES = {
-    "housekeeping": "Housekeeping",
-    "dietary": "Dietary & Nutrition",
-    "nursing": "Nursing",
-    "medical": "Medical",
-    "facilities": "Facilities & Maintenance",
-    "administrative": "Administrative",
+    "CLEANING": "Cleaning",
+    "AC": "AC Issues",
+    "TV": "TV Issues",
+    "LAUNDRY": "Laundry",
+    "ELECTRICAL": "Electrical",
+    "MAINTENANCE": "Maintenance",
+    "PATIENT_SUPPORT": "Patient Support",
+    "PATIENT_DIET": "Patient Diet",
+    "SERVICE_COMPLAINT": "Service Complaint",
 }
 
 

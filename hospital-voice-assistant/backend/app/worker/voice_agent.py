@@ -31,6 +31,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.orm import ServiceRequest
 from app.repositories.request_repo import RequestRepo
 from app.repositories.service_repo import ServiceRepo
+from app.services import hospital_api
 from app.services.embedding_service import embedding_service
 from app.services.intent_classifier import classify
 from app.core.startup import rebuild_faiss_from_db
@@ -107,6 +108,21 @@ async def _handle_transcript(transcript: str, room_name: str, identity: str) -> 
             used_fallback=result.used_fallback,
             payload_json=json.dumps(payload, ensure_ascii=False),
         )
+
+        # Optional: forward to the hospital's own API (no-op if unset).
+        try:
+            await hospital_api.forward(
+                {
+                    "room_name": room_name,
+                    "identity": identity,
+                    "raw_transcript": transcript,
+                    "normalized_transcript_en": result.normalized_transcript_en,
+                    "detected_language": result.detected_language,
+                    **payload,
+                }
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("worker.hospital_api.failed", error=str(exc))
         return (
             f"Got it. I've placed a {svc.name.lower()} request for you. "
             "A team member will attend shortly."
