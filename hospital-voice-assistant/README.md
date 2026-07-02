@@ -59,37 +59,41 @@ To customize, edit `backend/app/seed/default_services.json` (each row has
 `required_slots`, `priority`) and re-run the seeder — or POST to
 `/api/v1/services` and then `POST /api/v1/services/rebuild-index`.
 
-### Forward to your own hospital API (optional)
+### Forward to your own hospital API (adapter pattern, plug-in later)
 
-Every confirmed service request will be auto-POSTed to your hospital
-management API when you set these two variables in `.env`:
+The core voice assistant works **standalone**. Every validated JSON is
+persisted to Postgres and returned to the frontend regardless of any
+external system.
 
-```
-HOSPITAL_API_URL=https://your-hospital-api.example.com/requests
-HOSPITAL_API_KEY=your-optional-bearer-token
-```
+When the hospital's own API is ready, plug it in via the adapter interface —
+**no change to the business logic is required**.
 
-Payload shape:
+The contract lives in
+`backend/app/services/hospital_api/base.py`:
 
-```json
-{
-  "service_code": "ROOM_CLEANING",
-  "service_name": "Room Cleaning",
-  "category": "CLEANING",
-  "priority": "normal",
-  "raw_transcript": "मेरा कमरा साफ़ करा दीजिए 305",
-  "normalized_transcript_en": "Please clean my room 305",
-  "detected_language": "hi",
-  "confidence": 0.91,
-  "used_fallback": false,
-  "slots": { "room_number": "305" },
-  "room_name": "hva-1234",
-  "identity": "patient-42"
-}
+```python
+class HospitalApiAdapter(ABC):
+    async def forward(self, payload: dict) -> None: ...
 ```
 
-If the webhook is not set, the pipeline still persists to Postgres and
-returns the JSON to the caller — the forwarder is purely additive.
+Two adapters ship out of the box:
+
+| Adapter | When it's used | What it does |
+|---|---|---|
+| `NullHospitalApiAdapter` | `HOSPITAL_API_URL` is empty (default) | Logs and returns |
+| `HttpHospitalApiAdapter` | `HOSPITAL_API_URL` is set | **Stub** — call site is wired, but `forward()` is intentionally empty because the hospital API contract is not yet defined. Fill it in when the contract is available. |
+
+To activate later:
+1. Set `HOSPITAL_API_URL` (+ optional `HOSPITAL_API_KEY`) in `.env`.
+2. Implement `HttpHospitalApiAdapter.forward()` in
+   `backend/app/services/hospital_api/http_adapter.py` per your API's
+   contract (or add a new adapter class and register it in
+   `hospital_api/__init__.py::get_adapter`).
+3. Restart the `backend` and `voice-agent` containers. Done.
+
+The core app (`intent_classifier`, `voice_agent`, REST endpoints) does not
+change. No hospital-specific URLs, paths, methods, or payload assumptions
+exist anywhere in the core code.
 
 ## 4. Try it
 
@@ -130,36 +134,51 @@ hospital-voice-assistant/
     └── livekit/livekit.yaml        # Self-hosted LiveKit config
 ```
 
-## 6. Intent classification pipeline
+## 6. Intent classification pipeline (semantic-primary)
+
+Semantic similarity is the **base confidence signal**. Keywords are a small
+tie-breaker / boost only — they cannot single-handedly pick a service, and
+they cannot beat a semantically stronger candidate.
 
 ```
 speech ─► Deepgram STT (multi) ─► transcript
                                      │
                                      ▼
+                       (if non-English) Groq translate → English
+                                     │
+                                     ▼
                               BGE-M3 embedding
                                      │
                                      ▼
-                          FAISS top-K nearest services
+                          FAISS top-K nearest services      ← primary signal
                                      │
                                      ▼
-                         Rule engine (keywords + slots)
+                   Rule engine  → extract slots (room, time, qty)
+                                → optional +0.10 keyword boost
                                      │
                                      ▼
-                    Confidence = 0.6·semantic + 0.4·rule
+                     confidence = min(semantic + boost, 0.99)
                                      │
                         ┌────────────┴────────────┐
                      ≥ 0.85                     < 0.85
                         │                         │
                         ▼                         ▼
               Return JSON directly       Groq LLM fallback
-                                        (structured output)
+                                        (structured output;
+                                         chooses ONLY from catalog)
                                                   │
                                                   ▼
                                        Return validated JSON
                                                   │
                                                   ▼
-                                     Cartesia TTS confirmation
+                              Persist to Postgres · reply via Cartesia TTS ·
+                              hand off to `HospitalApiAdapter` (no-op by default)
 ```
+
+The service catalog lives in Postgres. Bootstrap from
+`backend/app/seed/default_services.json` or manage via
+`POST /api/v1/services` — either way the classifier reads from the DB and
+the FAISS index is rebuilt on demand via `POST /api/v1/services/rebuild-index`.
 
 ## 7. API surface (selected)
 

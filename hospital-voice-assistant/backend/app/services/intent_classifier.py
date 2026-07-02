@@ -16,8 +16,9 @@ from app.services.faiss_index import faiss_index
 DetectorFactory.seed = 0  # deterministic language detection
 
 
-SEMANTIC_WEIGHT = 0.6
-RULE_WEIGHT = 0.4
+SEMANTIC_WEIGHT = 1.0        # semantic similarity IS the primary confidence
+KEYWORD_BOOST_MAX = 0.10     # keywords contribute at most a +0.10 nudge
+KEYWORD_BOOST_CAP = 0.99     # boosted semantic score never claims certainty
 
 
 @dataclass
@@ -73,7 +74,10 @@ async def classify(
                 top_candidates=[],
             )
 
-        # Enrich each candidate with rule-engine score.
+        # Enrich each candidate with rule-engine slot extraction + optional
+        # small keyword boost. Semantic score remains the dominant signal —
+        # keywords cannot single-handedly select a match and cannot outweigh
+        # a semantically stronger candidate by more than KEYWORD_BOOST_MAX.
         repo = ServiceRepo(session)
         best: dict[str, Any] | None = None
         enriched: list[dict[str, Any]] = []
@@ -83,7 +87,9 @@ async def classify(
             if svc is None:
                 continue
             rule = rule_engine.evaluate(transcript_en, svc.keywords, svc.required_slots)
-            hybrid = SEMANTIC_WEIGHT * cand["semantic_score"] + RULE_WEIGHT * rule.keyword_score
+            semantic = cand["semantic_score"]
+            boost = min(rule.keyword_score * KEYWORD_BOOST_MAX, KEYWORD_BOOST_MAX)
+            hybrid = min(SEMANTIC_WEIGHT * semantic + boost, KEYWORD_BOOST_CAP)
             row = {
                 **cand,
                 "keyword_score": rule.keyword_score,

@@ -39,6 +39,33 @@ angular (4200)  ─►  fastapi (8000)  ─►  postgres (5432)
                               └── Groq LLM fallback
 ```
 
+## Delivered updates (session 3, 2026-02-01)
+- **Hospital API adapter pattern** — no hardcoded URLs, no invented contract.
+  - `app/services/hospital_api/base.py` → `HospitalApiAdapter` ABC (single `forward(payload)` port)
+  - `null_adapter.py` → default: logs and returns (used when `HOSPITAL_API_URL` empty)
+  - `http_adapter.py` → **stub** with call-site wired; `forward()` intentionally empty until the hospital API contract is defined
+  - `__init__.py::get_adapter()` picks the right adapter from env
+  - `voice_agent.py` and `POST /api/v1/requests` call the adapter, never a concrete client
+- **Semantic-primary classifier** — keywords demoted from co-equal to optional boost.
+  - Semantic (BGE-M3 + FAISS) is now weight 1.0 and IS the base confidence
+  - Rule engine still extracts slots (room, time, qty) and provides at most a `+0.10` keyword boost
+  - Boosted score capped at 0.99 so the system never claims perfect certainty
+- **Tests** — 6/6 pass, including new `test_intent_scoring.py` and `test_hospital_api_adapter.py`
+- **Docs** — README pipeline diagram + adapter section rewritten; `.env.example` documents the plug-in flow
+
+## Standalone guarantee
+The app is fully functional today with `HOSPITAL_API_URL` empty:
+- LiveKit voice session runs
+- BGE-M3 + FAISS classify intent semantically
+- Validated JSON is persisted to Postgres (`service_requests` table)
+- JSON is returned to the frontend and spoken back via Cartesia
+- `NullHospitalApiAdapter` logs the skip; nothing else happens
+
+When the hospital API becomes available, only two things change:
+1. `.env` gets `HOSPITAL_API_URL` (+ optional `HOSPITAL_API_KEY`)
+2. `HttpHospitalApiAdapter.forward()` gets its body filled in per the real contract
+No changes to business logic.
+
 ## Delivered in this session (2026-02-01)
 ### Root
 - `docker-compose.yml` (postgres, redis, livekit, backend, voice-agent, frontend)

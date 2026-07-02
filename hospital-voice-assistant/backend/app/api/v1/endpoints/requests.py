@@ -7,7 +7,7 @@ from app.models.orm import ServiceRequest
 from app.repositories.request_repo import RequestRepo
 from app.repositories.service_repo import ServiceRepo
 from app.schemas.dto import ServiceRequestIn, ServiceRequestOut
-from app.services import hospital_api
+from app.services.hospital_api import hospital_api_adapter
 
 router = APIRouter(prefix="/requests", tags=["requests"])
 
@@ -43,9 +43,10 @@ async def create_request(
     await session.commit()
     await session.refresh(req)
 
-    # Optional webhook to the hospital API (no-op when unset).
+    # Best-effort forward via the abstract hospital-API adapter.
+    # Persistence + response to the caller already succeeded above.
     try:
-        await hospital_api.forward(
+        await hospital_api_adapter.forward(
             {
                 "service_code": svc.code,
                 "service_name": svc.name,
@@ -58,7 +59,7 @@ async def create_request(
                 **payload.payload,
             }
         )
-    except Exception:
-        pass  # non-fatal - failure is already logged inside forward()
+    except Exception:  # noqa: BLE001 - never break the API response
+        pass
 
     return req
