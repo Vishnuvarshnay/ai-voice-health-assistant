@@ -22,7 +22,10 @@ core AI logic.
 - Deepgram Streaming Speech-to-Text (Nova-3)
 - Automatic Language Detection
 - Multilingual Intent Classification
-- Semantic Search using BGE-M3 + FAISS
+- Hybrid Intent Classification using BGE-M3 Multilingual Embeddings + FAISS Vector Index
+- Business Rule Engine
+- Slot Extraction
+- Confidence Scoring
 - Rule-Based Slot Extraction
 - Groq LLM Fallback (only when confidence < 0.85)
 - Cartesia Streaming Text-to-Speech (Sonic)
@@ -46,9 +49,12 @@ core AI logic.
 | Voice Transport      | LiveKit                           |
 | Speech-to-Text       | Deepgram Streaming Nova-3         |
 | Language Detection   | Deepgram                          |
-| Semantic Model       | BGE-M3                            |
-| Vector Search        | FAISS                             |
+| Semantic Embedding Model | BGE-M3 Multilingual           |
+| Vector Index         | FAISS                             |
+| Intent Classification| Hybrid Semantic Classifier        |
 | Rule Engine          | Python                            |
+| Slot Extraction      | Rule-Based                        |
+| Confidence Scoring   | Hybrid Semantic Confidence        |                         
 | LLM Fallback         | Groq `llama-3.3-70b-versatile`    |
 | Text-to-Speech       | Cartesia Sonic                    |
 | Database             | PostgreSQL 17                     |
@@ -61,70 +67,84 @@ core AI logic.
 
 ```
 Patient
-   │
-   ▼
+    │
+    ▼
 LiveKit
-   │
-   ▼
+    │
+    ▼
 Deepgram Streaming STT
-   │
-   ▼
+    │
+    ▼
 Original Transcript
-   │
-   ▼
+    │
+    ▼
 Language Detection
-   │
-   ▼
-BGE-M3 Multilingual Embedding
-   │
-   ▼
-FAISS Semantic Search
-   │
-   ▼
+    │
+    ▼
+BGE-M3 Multilingual Embeddings
+    │
+    ▼
+FAISS Top-K Semantic Search
+    │
+    ▼
 Top-K Candidate Services
-   │
-   ▼
+    │
+    ▼
 Business Rule Engine
-   • Room Number
-   • Quantity
-   • Time
-   • Priority
-   • Slot Extraction
-   • Keyword Boost (optional)
-   │
-   ▼
-Confidence Calculation
-   │
-   ▼
-Confidence ≥ 0.85 ?
-   ├── YES ──► Validated JSON
-   └── NO  ──► Groq LLM Fallback
-                    │
-                    ▼
-              JSON Validation
-                    │
-                    ▼
-             Persist Request  (PostgreSQL)
-                    │
-                    ▼
-             HospitalApiAdapter  (default: no-op)
-                    │
-                    ▼
-             Cartesia Streaming TTS
-                    │
-                    ▼
-                 Patient
+    ├── Slot Extraction
+    ├── Room Number
+    ├── Bed Number
+    ├── Quantity
+    ├── Time
+    ├── Priority
+    └── Confidence Scoring
+    │
+    ▼
+Final Confidence Score
+    │
+    ├──────────────────────┐
+    │                      │
+Confidence ≥ 0.85    Confidence < 0.85
+    │                      │
+    ▼                      ▼
+Generate JSON        Groq LLM Fallback
+    │                      │
+    │              Select Only from
+    │              Service Catalog
+    │                      │
+    └──────────────┬───────┘
+                   ▼
+        JSON Schema Validation
+                   │
+                   ▼
+      Persist Request (PostgreSQL)
+                   │
+                   ▼
+HospitalApiAdapter (default: no-op)
+                   │
+                   ▼
+Cartesia Streaming TTS
+                   │
+                   ▼
+               Patient
 ```
 
 ---
 
 # Design Principles
 
-## Semantic Search First
-The primary signal is semantic similarity using BGE-M3 embeddings.
-The classifier does **not** rely on keywords. Keywords only provide a
-small confidence boost (≤ +0.10).
+## Hybrid Semantic Intent Classification
 
+The intent classifier combines multiple stages:
+
+1. BGE-M3 multilingual embeddings
+2. FAISS Top-K semantic retrieval
+3. Business rule validation
+4. Slot extraction
+5. Confidence scoring
+6. Groq fallback when confidence < 0.85
+
+Semantic similarity is the primary signal. Business rules refine the result, and the LLM is used only as a fallback.
 ## No Translation Required
 BGE-M3 is multilingual. Patient requests remain in their original
 language. Hindi, Spanish, French, German, Arabic, Japanese, Tamil,
@@ -138,9 +158,24 @@ and hospital ticket text — not for semantic matching. Toggle with
 # Intent Classification Pipeline
 
 ```
-Speech → Deepgram STT → Language Detection → BGE-M3 Embedding →
-FAISS → Top-K Services → Business Rule Validation →
-Confidence Score → JSON
+Speech
+   │
+Deepgram Streaming STT
+   │
+Language Detection
+   │
+BGE-M3 Embeddings
+   │
+FAISS Top-K Search
+   │
+Business Rule Engine
+   │
+Slot Extraction
+   │
+Confidence Scoring
+   │
+├── ≥0.85 → Validated JSON
+└── <0.85 → Groq LLM → JSON Validation
 ```
 
 ---
